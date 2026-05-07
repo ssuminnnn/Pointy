@@ -1,0 +1,119 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { ChevronLeft, Copy, Check, UserPlus, LogOut } from 'lucide-react'
+import { PhoneFrame, C, AVATARS } from '@/components/ui/pointy'
+import { BottomNav } from '@/components/BottomNav'
+import { createClient } from '@/utils/supabase/client'
+
+interface Profile { id: string; nickname: string; invite_code: string; partner_id: string|null; relation_type: string|null; system_type: string|null; is_admin: boolean }
+
+const REL_LABELS: Record<string, string> = { couple: '연인', married: '부부', child: '자녀', friend: '친구', family: '가족', other: '기타' }
+const SYS_LABELS: Record<string, string> = { score_decrease: '차감형', score_increase: '증가형', sticker: '포도알' }
+
+export default function SettingsClient({ profile, partner, email }: { profile: Profile; partner: Profile|null; email: string }) {
+  const router = useRouter()
+  const [copied, setCopied] = useState(false)
+
+  async function handleLogout() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/')
+    router.refresh()
+  }
+
+  function copyCode() {
+    navigator.clipboard.writeText(profile.invite_code)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const relLabel = profile.relation_type ? REL_LABELS[profile.relation_type] ?? profile.relation_type : '미설정'
+  const sysLabel = profile.system_type ? SYS_LABELS[profile.system_type] ?? profile.system_type : '미설정'
+
+  return (
+    <PhoneFrame>
+      <div className="flex flex-col min-h-screen pb-24" style={{ background: C.page }}>
+        <header className="sticky top-0 z-20 border-b" style={{ background: 'rgba(255,255,255,0.94)', borderColor: C.border, backdropFilter: 'blur(12px)' }}>
+          <div className="max-w-[390px] mx-auto px-5 py-3.5 flex items-center gap-3">
+            <Link href="/dashboard" className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: C.muted }}>
+              <ChevronLeft className="w-4 h-4" style={{ color: C.text }} />
+            </Link>
+            <h2 className="text-lg font-bold" style={{ color: C.text, fontFamily: 'Noto Serif KR, serif' }}>설정</h2>
+          </div>
+        </header>
+
+        <main className="flex-1 max-w-[390px] mx-auto w-full px-5 py-5 space-y-4">
+          {/* 프로필 */}
+          <div className="flex items-center gap-4 rounded-3xl border p-5 shadow-sm" style={{ background: C.card, borderColor: C.border }}>
+            <div className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold" style={{ background: C.primary, color: C.text }}>
+              {profile.nickname[0]}
+            </div>
+            <div>
+              <p className="text-base font-bold" style={{ color: C.text }}>{profile.nickname}</p>
+              <p className="text-xs" style={{ color: C.sub }}>{email}</p>
+            </div>
+          </div>
+
+          {/* 관계 설정 */}
+          <div className="rounded-3xl border overflow-hidden shadow-sm" style={{ background: C.card, borderColor: C.border }}>
+            {[{ label: '관계', value: relLabel }, { label: '방식', value: sysLabel }, { label: '역할', value: profile.is_admin ? '관리자' : '일반' }].map((r, i) => (
+              <div key={r.label} className="flex items-center justify-between px-5 py-4"
+                style={{ borderTop: i > 0 ? `1px solid ${C.muted}` : undefined }}>
+                <span className="text-xs font-medium" style={{ color: C.sub }}>{r.label}</span>
+                <span className="text-sm font-semibold" style={{ color: C.text }}>{r.value}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* 초대 코드 */}
+          <div className="rounded-3xl border p-5 shadow-sm" style={{ background: C.card, borderColor: C.border }}>
+            <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: C.sub }}>내 초대 코드</p>
+            <div className="flex items-center justify-between rounded-2xl px-4 py-3" style={{ background: C.muted }}>
+              <span className="text-lg font-bold tracking-widest" style={{ color: C.text }}>{profile.invite_code}</span>
+              <button onClick={copyCode} className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#d4607a' }}>
+                {copied ? <><Check className="w-3.5 h-3.5" />복사됨</> : <><Copy className="w-3.5 h-3.5" />복사</>}
+              </button>
+            </div>
+          </div>
+
+          {/* 연결된 멤버 */}
+          <div className="rounded-3xl border p-5 shadow-sm" style={{ background: C.card, borderColor: C.border }}>
+            <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: C.sub }}>
+              연결된 멤버 {partner ? '2명' : '1명'}
+            </p>
+            <div className="space-y-2.5">
+              {[{ profile, label: '나' }, ...(partner ? [{ profile: partner, label: '파트너' }] : [])].map(({ profile: p, label }, i) => (
+                <div key={p.id} className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: AVATARS[i % AVATARS.length], color: C.text }}>
+                    {p.nickname[0]}
+                  </div>
+                  <span className="text-sm font-semibold flex-1" style={{ color: C.text }}>{p.nickname}</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                    style={{ background: p.is_admin ? '#FFE0E8' : C.border, color: p.is_admin ? '#d4607a' : C.sub }}>
+                    {p.is_admin ? '관리자' : '멤버'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {!partner && (
+              <Link href="/connect" className="mt-4 flex items-center gap-1 text-xs font-semibold hover:underline" style={{ color: C.primary }}>
+                <UserPlus className="w-3.5 h-3.5" /> 파트너 연결하기
+              </Link>
+            )}
+          </div>
+
+          {/* 로그아웃 */}
+          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold"
+            style={{ background: '#ffeaea', color: C.negative }}>
+            <LogOut className="w-4 h-4" /> 로그아웃
+          </button>
+        </main>
+
+        <BottomNav active="settings" />
+      </div>
+    </PhoneFrame>
+  )
+}
