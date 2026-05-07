@@ -8,18 +8,20 @@ import { createClient } from '@/utils/supabase/client'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [pw, setPw] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function handleLogin() {
+    if (!username.trim()) { setError('아이디를 입력해주세요'); return }
     setLoading(true)
     setError('')
     const supabase = createClient()
+    const email = `${username.trim().toLowerCase()}@pointy.app`
     const { error } = await supabase.auth.signInWithPassword({ email, password: pw })
     if (error) {
-      setError('이메일 또는 비밀번호가 올바르지 않아요')
+      setError('아이디 또는 비밀번호가 올바르지 않아요')
       setLoading(false)
       return
     }
@@ -36,7 +38,7 @@ export default function LoginPage() {
           <p className="text-sm" style={{ color: C.sub }}>우리만의 칭찬 점수 관리</p>
         </div>
         <div className="w-full max-w-sm space-y-4">
-          <FInput label="이메일" type="email" placeholder="hello@pointy.app" value={email} onChange={setEmail} />
+          <FInput label="아이디" placeholder="아이디를 입력하세요" value={username} onChange={setUsername} />
           <FInput label="비밀번호" type="password" placeholder="비밀번호를 입력해주세요" value={pw} onChange={setPw} error={error} />
           <Btn full disabled={loading} onClick={handleLogin}>
             {loading ? '로그인 중...' : '로그인'}
