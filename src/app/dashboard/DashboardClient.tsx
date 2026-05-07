@@ -168,20 +168,6 @@ export default function DashboardClient({ profile, partner, currentScore, recent
             </div>
           )}
 
-          {/* 스티커 */}
-          {!isGrape && (
-            <div className="rounded-3xl border p-5 shadow-sm" style={{ background: C.card, borderColor: C.border }}>
-              <p className="text-sm font-semibold mb-3" style={{ color: C.text }}>🌸 획득한 스티커</p>
-              <div className="flex flex-wrap gap-2">
-                {Array.from({ length: Math.min(Math.floor(score / 10), 10) }).map((_, i) => (
-                  <div key={i} className="w-9 h-9 rounded-2xl flex items-center justify-center text-lg" style={{ background: C.muted }}>
-                    {['🌸','⭐','💕','🍀','🎀','✨','🌷','🌼','💖','🎉'][i % 10]}
-                  </div>
-                ))}
-                {score < 10 && <p className="text-xs" style={{ color: C.sub }}>칭찬 10점마다 스티커를 획득해요!</p>}
-              </div>
-            </div>
-          )}
 
           {/* 최근 기록 */}
           <div className="rounded-3xl border p-5 shadow-sm" style={{ background: C.card, borderColor: C.border }}>
