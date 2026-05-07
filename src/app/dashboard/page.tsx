@@ -9,7 +9,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
   if (!profile) redirect('/')
-  if (!profile.relation_type) redirect('/onboarding')
+  if (!profile.relation_type && !profile.partner_id) redirect('/onboarding')
 
   let partner = null
   if (profile.partner_id) {
