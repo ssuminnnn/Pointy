@@ -44,10 +44,10 @@ export default function ConnectPage() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data } = await supabase.from('profiles').select('invite_code, partner_id, group_id').eq('id', user.id).single()
+      const { data } = await supabase.from('profiles').select('invite_code, partner_id').eq('id', user.id).single()
       if (data) {
         setMyCode(data.invite_code)
-        if (data.group_id || data.partner_id) router.push('/dashboard')
+        if (data.partner_id) router.push('/dashboard')
       }
     }
     loadCode()
