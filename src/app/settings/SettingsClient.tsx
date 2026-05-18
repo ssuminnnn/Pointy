@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Copy, Check, UserPlus, LogOut } from 'lucide-react'
-import { PhoneFrame, C, AVATARS } from '@/components/ui/pointy'
+import { ChevronLeft, Copy, Check, UserPlus, LogOut, Unlink, RotateCcw, X } from 'lucide-react'
+import { PhoneFrame, C, AVATARS, Btn } from '@/components/ui/pointy'
 import { BottomNav } from '@/components/BottomNav'
 import { createClient } from '@/utils/supabase/client'
 
@@ -13,9 +13,39 @@ interface Profile { id: string; nickname: string; invite_code: string; partner_i
 const REL_LABELS: Record<string, string> = { couple: '연인', married: '부부', child: '자녀', friend: '친구', family: '가족', other: '기타' }
 const SYS_LABELS: Record<string, string> = { score_decrease: '차감형', score_increase: '증가형', sticker: '포도알' }
 
+function ConfirmModal({ title, desc, confirmLabel, onConfirm, onClose, danger = true }: {
+  title: string; desc: string; confirmLabel: string; onConfirm: () => void; onClose: () => void; danger?: boolean
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 backdrop-blur-sm" style={{ background: 'rgba(46,31,36,0.28)' }} onClick={onClose} />
+      <div className="relative z-10 w-full max-w-[390px] mx-auto rounded-t-[2.5rem] sm:rounded-[2rem] shadow-2xl px-6 pt-5 pb-10" style={{ background: C.card }}>
+        <div className="w-10 h-1.5 rounded-full mx-auto mb-5 sm:hidden" style={{ background: C.border }} />
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base font-bold" style={{ color: C.text }}>{title}</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: C.muted }}>
+            <X className="w-4 h-4" style={{ color: C.sub }} />
+          </button>
+        </div>
+        <p className="text-sm mb-6" style={{ color: C.sub }}>{desc}</p>
+        <div className="flex gap-2">
+          <Btn variant="secondary" style={{ flex: 1 }} onClick={onClose}>취소</Btn>
+          <Btn style={{ flex: 1, background: danger ? '#ffeaea' : C.primary, color: danger ? C.negative : C.text }} onClick={() => { onConfirm(); onClose() }}>
+            {confirmLabel}
+          </Btn>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function SettingsClient({ profile, partner, email }: { profile: Profile; partner: Profile|null; email: string }) {
   const router = useRouter()
   const [copied, setCopied] = useState(false)
+  const [showDisconnect, setShowDisconnect] = useState(false)
+  const [showReset, setShowReset] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const isGrape = profile.system_type === 'sticker'
 
   async function handleLogout() {
     const supabase = createClient()
@@ -28,6 +58,26 @@ export default function SettingsClient({ profile, partner, email }: { profile: P
     navigator.clipboard.writeText(profile.invite_code)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function handleDisconnect() {
+    setLoading(true)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.rpc('disconnect_partners', { my_id: user.id })
+    router.push('/onboarding')
+    router.refresh()
+  }
+
+  async function handleResetGrapes() {
+    setLoading(true)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.rpc('reset_grapes', { my_id: user.id })
+    setLoading(false)
+    router.refresh()
   }
 
   const relLabel = profile.relation_type ? REL_LABELS[profile.relation_type] ?? profile.relation_type : '미설정'
@@ -105,14 +155,52 @@ export default function SettingsClient({ profile, partner, email }: { profile: P
             )}
           </div>
 
+          {/* 포도알 초기화 (포도알 시스템 + 관리자만) */}
+          {isGrape && profile.is_admin && partner && (
+            <button onClick={() => setShowReset(true)} disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold"
+              style={{ background: '#f3eeff', color: '#7B4DAA' }}>
+              <RotateCcw className="w-4 h-4" /> 포도알 초기화
+            </button>
+          )}
+
+          {/* 연결 해제 */}
+          {partner && (
+            <button onClick={() => setShowDisconnect(true)} disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold"
+              style={{ background: '#ffeaea', color: C.negative }}>
+              <Unlink className="w-4 h-4" /> 파트너 연결 해제
+            </button>
+          )}
+
           {/* 로그아웃 */}
           <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold"
-            style={{ background: '#ffeaea', color: C.negative }}>
+            style={{ background: C.muted, color: C.sub }}>
             <LogOut className="w-4 h-4" /> 로그아웃
           </button>
         </main>
 
         <BottomNav active="settings" />
+
+        {showReset && (
+          <ConfirmModal
+            title="포도알 초기화"
+            desc="모든 포도알 기록이 삭제되고 0개로 초기화돼요. 이 작업은 되돌릴 수 없어요."
+            confirmLabel="초기화"
+            onConfirm={handleResetGrapes}
+            onClose={() => setShowReset(false)}
+          />
+        )}
+
+        {showDisconnect && (
+          <ConfirmModal
+            title="파트너 연결 해제"
+            desc={`${partner?.nickname}님과의 연결을 해제할까요? 기록은 유지되지만 연결이 끊어져요.`}
+            confirmLabel="연결 해제"
+            onConfirm={handleDisconnect}
+            onClose={() => setShowDisconnect(false)}
+          />
+        )}
       </div>
     </PhoneFrame>
   )
