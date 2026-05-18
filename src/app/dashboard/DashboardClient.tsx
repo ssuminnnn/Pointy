@@ -126,9 +126,15 @@ export default function DashboardClient({ profile, partner, currentScore, recent
           <div className="rounded-3xl border p-5 shadow-sm" style={{ background: C.card, borderColor: C.border }}>
             <p className="text-xs font-semibold tracking-widest uppercase mb-4" style={{ color: C.sub }}>점수 현황</p>
             {isGrape ? (
-              <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center gap-2">
                 <GrapeBunch filled={score} total={30} size="md" />
-                <p className="text-3xl font-bold" style={{ color: '#7B4DAA', fontFamily: 'Noto Serif KR, serif' }}>{score} / 30</p>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-3xl font-bold" style={{ color: '#7B4DAA', fontFamily: 'Noto Serif KR, serif' }}>{score}</span>
+                  <span className="text-base font-medium" style={{ color: '#a07880' }}>/ 30알</span>
+                </div>
+                <p className="text-xs mb-1" style={{ color: C.sub }}>
+                  {score === 0 ? '아직 포도알이 없어요 🍇' : score >= 30 ? '🎉 포도송이 완성!' : `${30 - score}알 더 모으면 완성!`}
+                </p>
                 <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ background: C.muted }}>
                   <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(score / 30) * 100}%`, background: 'linear-gradient(90deg,#9b6dca,#7B4DAA)' }} />
                 </div>

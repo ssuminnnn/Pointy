@@ -32,10 +32,11 @@ export function PCoinLogo({ size = 40, bg = C.primary }: { size?: number; bg?: s
 }
 
 export function GrapeBunch({ filled, total = 30, size = 'md' }: { filled: number; total?: number; size?: 'sm'|'md'|'lg' }) {
-  const dim = size === 'sm' ? 56 : size === 'lg' ? 180 : 110
+  const dim = size === 'sm' ? 64 : size === 'lg' ? 180 : 120
   const r   = size === 'sm' ? 5  : size === 'lg' ? 13  : 9
   const gap = r * 2.35
-  const layout = [1,2,3,4,5,4,3,2,1]
+  // 1+2+3+4+5+5+4+3+2+1 = 30 (정확히 30칸)
+  const layout = [1,2,3,4,5,5,4,3,2,1]
   const contentH = Math.ceil(17 + (layout.length - 1) * gap * 0.86 + r * 2 + 6)
   let idx = 0
   return (
@@ -54,7 +55,11 @@ export function GrapeBunch({ filled, total = 30, size = 'md' }: { filled: number
             const on = idx < filled
             nodes.push(
               <g key={idx}>
-                <circle cx={x} cy={y} r={r} fill={on?'#7B4DAA':'#ecdff5'} stroke={on?'#5e3585':'#d8c8ec'} strokeWidth="0.8"/>
+                <circle cx={x} cy={y} r={r}
+                  fill={on ? '#7B4DAA' : 'rgba(216,200,236,0.25)'}
+                  stroke={on ? '#5e3585' : '#d8c8ec'}
+                  strokeWidth={on ? '0.8' : '1.2'}
+                />
                 {on && <circle cx={x-r*.28} cy={y-r*.28} r={r*.28} fill="rgba(255,255,255,.4)"/>}
               </g>
             )
