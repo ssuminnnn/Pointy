@@ -8,7 +8,7 @@ import { PhoneFrame, C, AVATARS, Btn } from '@/components/ui/pointy'
 import { BottomNav } from '@/components/BottomNav'
 import { createClient } from '@/utils/supabase/client'
 
-interface Profile { id: string; nickname: string; invite_code: string; partner_id: string|null; relation_type: string|null; system_type: string|null; is_admin: boolean }
+interface Profile { id: string; nickname: string; invite_code: string; partner_id: string|null; group_id: string|null; relation_type: string|null; system_type: string|null; is_admin: boolean }
 
 const REL_LABELS: Record<string, string> = { couple: '연인', married: '부부', child: '자녀', friend: '친구', family: '가족', other: '기타' }
 const SYS_LABELS: Record<string, string> = { score_decrease: '차감형', score_increase: '증가형', sticker: '포도알' }
@@ -39,13 +39,15 @@ function ConfirmModal({ title, desc, confirmLabel, onConfirm, onClose, danger = 
   )
 }
 
-export default function SettingsClient({ profile, partner, email }: { profile: Profile; partner: Profile|null; email: string }) {
+export default function SettingsClient({ profile, groupMembers, email }: { profile: Profile; groupMembers: Profile[]; email: string }) {
   const router = useRouter()
   const [copied, setCopied] = useState(false)
   const [showDisconnect, setShowDisconnect] = useState(false)
   const [showReset, setShowReset] = useState(false)
   const [loading, setLoading] = useState(false)
   const isGrape = profile.system_type === 'sticker'
+  const partner = groupMembers[0] ?? null
+  const hasPartner = groupMembers.length > 0
 
   async function handleLogout() {
     const supabase = createClient()
@@ -132,15 +134,17 @@ export default function SettingsClient({ profile, partner, email }: { profile: P
           {/* 연결된 멤버 */}
           <div className="rounded-3xl border p-5 shadow-sm" style={{ background: C.card, borderColor: C.border }}>
             <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: C.sub }}>
-              연결된 멤버 {partner ? '2명' : '1명'}
+              연결된 멤버 {groupMembers.length + 1}명
             </p>
             <div className="space-y-2.5">
-              {[{ profile, label: '나' }, ...(partner ? [{ profile: partner, label: '파트너' }] : [])].map(({ profile: p, label }, i) => (
+              {[profile, ...groupMembers].map((p, i) => (
                 <div key={p.id} className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: AVATARS[i % AVATARS.length], color: C.text }}>
                     {p.nickname[0]}
                   </div>
-                  <span className="text-sm font-semibold flex-1" style={{ color: C.text }}>{p.nickname}</span>
+                  <span className="text-sm font-semibold flex-1" style={{ color: C.text }}>
+                    {p.nickname} {p.id === profile.id && <span className="text-xs font-normal" style={{ color: C.sub }}>(나)</span>}
+                  </span>
                   <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
                     style={{ background: p.is_admin ? '#FFE0E8' : C.border, color: p.is_admin ? '#d4607a' : C.sub }}>
                     {p.is_admin ? '관리자' : '멤버'}
@@ -148,7 +152,7 @@ export default function SettingsClient({ profile, partner, email }: { profile: P
                 </div>
               ))}
             </div>
-            {!partner && (
+            {!hasPartner && (
               <Link href="/connect" className="mt-4 flex items-center gap-1 text-xs font-semibold hover:underline" style={{ color: C.primary }}>
                 <UserPlus className="w-3.5 h-3.5" /> 파트너 연결하기
               </Link>
@@ -156,7 +160,7 @@ export default function SettingsClient({ profile, partner, email }: { profile: P
           </div>
 
           {/* 포도알 초기화 (포도알 시스템 + 관리자만) */}
-          {isGrape && profile.is_admin && partner && (
+          {isGrape && profile.is_admin && hasPartner && (
             <button onClick={() => setShowReset(true)} disabled={loading}
               className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold"
               style={{ background: '#f3eeff', color: '#7B4DAA' }}>
@@ -165,7 +169,7 @@ export default function SettingsClient({ profile, partner, email }: { profile: P
           )}
 
           {/* 연결 해제 */}
-          {partner && (
+          {hasPartner && (
             <button onClick={() => setShowDisconnect(true)} disabled={loading}
               className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold"
               style={{ background: '#ffeaea', color: C.negative }}>
@@ -194,9 +198,9 @@ export default function SettingsClient({ profile, partner, email }: { profile: P
 
         {showDisconnect && (
           <ConfirmModal
-            title="파트너 연결 해제"
-            desc={`${partner?.nickname}님과의 연결을 해제할까요? 기록은 유지되지만 연결이 끊어져요.`}
-            confirmLabel="연결 해제"
+            title="그룹 연결 해제"
+            desc="그룹에서 나갈까요? 기록은 유지되지만 연결이 끊어져요."
+            confirmLabel="나가기"
             onConfirm={handleDisconnect}
             onClose={() => setShowDisconnect(false)}
           />

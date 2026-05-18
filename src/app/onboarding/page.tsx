@@ -80,11 +80,12 @@ export default function OnboardingPage() {
       grape: 'sticker',
     }
 
-    await supabase.from('profiles').update({
-      relation_type: relType,
-      system_type: systemMap[sysType],
-      is_admin: myRole,
-    }).eq('id', user.id)
+    await supabase.rpc('setup_profile', {
+      my_id: user.id,
+      p_relation_type: relType,
+      p_system_type: systemMap[sysType],
+      p_is_admin: myRole,
+    })
 
     router.push('/connect')
   }

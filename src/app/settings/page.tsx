@@ -10,11 +10,18 @@ export default async function SettingsPage() {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
   if (!profile) redirect('/')
 
-  let partner = null
-  if (profile.partner_id) {
+  // 그룹 멤버 가져오기
+  let groupMembers: any[] = []
+  if (profile.group_id) {
+    const { data } = await supabase
+      .from('profiles').select('*')
+      .eq('group_id', profile.group_id)
+      .neq('id', user.id)
+    groupMembers = data ?? []
+  } else if (profile.partner_id) {
     const { data } = await supabase.from('profiles').select('*').eq('id', profile.partner_id).single()
-    partner = data
+    if (data) groupMembers = [data]
   }
 
-  return <SettingsClient profile={profile} partner={partner} email={user.email ?? ''} />
+  return <SettingsClient profile={profile} groupMembers={groupMembers} email={user.email ?? ''} />
 }

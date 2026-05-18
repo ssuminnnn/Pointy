@@ -9,36 +9,47 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
   if (!profile) redirect('/')
-  if (!profile.relation_type && !profile.partner_id) redirect('/onboarding')
+  if (!profile.relation_type && !profile.partner_id && !profile.group_id) redirect('/onboarding')
 
-  let partner = null
-  if (profile.partner_id) {
+  const systemType = profile.system_type ?? 'score_increase'
+  const isDecreasing = systemType === 'score_decrease'
+
+  // 그룹 멤버 가져오기
+  let otherMembers: any[] = []
+  if (profile.group_id) {
+    const { data } = await supabase
+      .from('profiles').select('*')
+      .eq('group_id', profile.group_id)
+      .neq('id', user.id)
+    otherMembers = data ?? []
+  } else if (profile.partner_id) {
     const { data } = await supabase.from('profiles').select('*').eq('id', profile.partner_id).single()
-    partner = data
+    if (data) otherMembers = [data]
   }
 
-  // 점수 계산
-  const managedUserId = profile.is_admin ? profile.partner_id : user.id
-  let currentScore = profile.system_type === 'score_decrease' ? 100 : 0
+  const allMembers = [profile, ...otherMembers]
 
-  if (managedUserId) {
-    const { data: records } = await supabase.from('records').select('amount').eq('to_user_id', managedUserId)
-    const total = (records ?? []).reduce((s: number, r: { amount: number }) => s + r.amount, 0)
-    currentScore = profile.system_type === 'score_decrease' ? 100 + total : total
-  }
+  // 각 멤버 점수 계산
+  const memberScores = await Promise.all(allMembers.map(async (member) => {
+    const { data: recs } = await supabase.from('records').select('amount').eq('to_user_id', member.id)
+    const total = (recs ?? []).reduce((s: number, r: { amount: number }) => s + r.amount, 0)
+    const score = isDecreasing ? 100 + total : total
+    return { ...member, score }
+  }))
 
+  // 최근 기록
   const { data: recentRecords } = await supabase
     .from('records')
     .select(`*, from_user:profiles!records_from_user_id_fkey(id, nickname), to_user:profiles!records_to_user_id_fkey(id, nickname)`)
-    .or(profile.partner_id ? `from_user_id.eq.${user.id},to_user_id.eq.${user.id}` : `from_user_id.eq.${user.id}`)
+    .in('to_user_id', allMembers.map(m => m.id))
     .order('created_at', { ascending: false })
     .limit(5)
 
   return (
     <DashboardClient
       profile={profile}
-      partner={partner}
-      currentScore={currentScore}
+      memberScores={memberScores}
+      systemType={systemType}
       recentRecords={recentRecords ?? []}
     />
   )
