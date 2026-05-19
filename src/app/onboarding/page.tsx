@@ -155,10 +155,10 @@ export default function OnboardingPage() {
               <p className="text-xs font-semibold mb-3" style={{ color: C.text }}>내 역할을 선택해주세요</p>
               <div className="space-y-3">
                 <SelectCard icon="👑" title="관리자"
-                  desc={'점수를 주거나 빼는 역할\n파트너의 점수를 관리해요'}
+                  desc={'점수를 주거나 빼는 역할'}
                   selected={isAdmin === true} onClick={() => setIsAdmin(true)} />
                 <SelectCard icon="🌸" title="일반"
-                  desc={'점수를 받는 역할\n파트너가 점수를 관리해줘요'}
+                  desc={'점수를 받는 역할'}
                   selected={isAdmin === false} onClick={() => setIsAdmin(false)} />
               </div>
             </div>
@@ -287,14 +287,14 @@ export default function OnboardingPage() {
           <button onClick={() => setStep(1)} className="text-sm mt-4 mb-2" style={{ color: C.sub }}>← 뒤로</button>
           <div className="mt-4 mb-6">
             <h2 className="text-2xl font-bold" style={{ color: C.text, fontFamily: 'Noto Serif KR, serif' }}>내 역할을 선택해주세요</h2>
-            <p className="text-sm mt-2" style={{ color: C.sub }}>파트너는 반대 역할로 자동 설정돼요</p>
+            <p className="text-sm mt-2" style={{ color: C.sub }}>파트너도 각자 역할을 선택해요</p>
           </div>
           <div className="space-y-3 flex-1">
             <SelectCard icon="👑" title="관리자"
-              desc={'점수를 주거나 빼는 역할\n파트너의 점수를 관리해요'}
+              desc={'점수를 주거나 빼는 역할'}
               selected={myRole === true} onClick={() => setMyRole(true)} />
             <SelectCard icon="🌸" title="일반"
-              desc={'점수를 받는 역할\n파트너가 점수를 관리해줘요'}
+              desc={'점수를 받는 역할'}
               selected={myRole === false} onClick={() => setMyRole(false)} />
           </div>
           <Btn full disabled={myRole === null || saving} style={{ marginTop: 24 }} onClick={finishOnboarding}>
