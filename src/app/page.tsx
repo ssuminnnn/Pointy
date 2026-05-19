@@ -1,31 +1,23 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { PCoinLogo, FInput, Btn, PhoneFrame, C } from '@/components/ui/pointy'
-import { createClient } from '@/utils/supabase/client'
+import { loginAction } from '@/app/actions/auth'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [username, setUsername] = useState('')
   const [pw, setPw] = useState('')
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
-  async function handleLogin() {
+  function handleLogin() {
     if (!username.trim()) { setError('아이디를 입력해주세요'); return }
-    setLoading(true)
     setError('')
-    const supabase = createClient()
-    const email = `${username.trim().toLowerCase()}@pointy.app`
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pw })
-    if (error) {
-      setError('아이디 또는 비밀번호가 올바르지 않아요')
-      setLoading(false)
-      return
-    }
-    window.location.href = '/dashboard'
+    startTransition(async () => {
+      const err = await loginAction(username, pw)
+      if (err) setError(err)
+    })
   }
 
   return (
@@ -39,8 +31,8 @@ export default function LoginPage() {
         <div className="w-full max-w-sm space-y-4">
           <FInput label="아이디" placeholder="아이디를 입력하세요" value={username} onChange={setUsername} />
           <FInput label="비밀번호" type="password" placeholder="비밀번호를 입력해주세요" value={pw} onChange={setPw} error={error} />
-          <Btn full disabled={loading} onClick={handleLogin}>
-            {loading ? '로그인 중...' : '로그인'}
+          <Btn full disabled={isPending} onClick={handleLogin}>
+            {isPending ? '로그인 중...' : '로그인'}
           </Btn>
           <p className="text-center text-xs" style={{ color: C.sub }}>
             아직 계정이 없으신가요?{' '}

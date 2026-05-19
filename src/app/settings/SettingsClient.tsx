@@ -7,6 +7,7 @@ import { ChevronLeft, Copy, Check, UserPlus, LogOut, Unlink, RotateCcw, X } from
 import { PhoneFrame, C, AVATARS, Btn } from '@/components/ui/pointy'
 import { BottomNav } from '@/components/BottomNav'
 import { createClient } from '@/utils/supabase/client'
+import { signOut } from '@/app/actions/auth'
 
 interface Profile { id: string; nickname: string; invite_code: string; partner_id: string|null; group_id: string|null; relation_type: string|null; system_type: string|null; is_admin: boolean }
 
@@ -50,10 +51,7 @@ export default function SettingsClient({ profile, groupMembers, email }: { profi
   const hasPartner = groupMembers.length > 0
 
   async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/')
-    router.refresh()
+    await signOut()
   }
 
   function copyCode() {

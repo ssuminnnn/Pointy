@@ -3,68 +3,44 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 
-export async function signUp(formData: FormData) {
+export async function loginAction(username: string, password: string): Promise<string | null> {
+  const supabase = await createClient()
+  const email = `${username.trim().toLowerCase()}@pointy.app`
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) return '아이디 또는 비밀번호가 올바르지 않아요'
+  redirect('/dashboard')
+}
+
+export async function signupAction(
+  username: string, nickname: string, password: string
+): Promise<string | null> {
   const supabase = await createClient()
 
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
-  const nickname = formData.get('nickname') as string
+  const { data: existing } = await supabase
+    .from('profiles').select('id')
+    .eq('username', username.trim().toLowerCase()).single()
+  if (existing) return '이미 사용 중인 아이디예요'
 
-  const { data, error } = await supabase.auth.signUp({ email, password })
+  const email = `${username.trim().toLowerCase()}@pointy.app`
+  const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+  if (signUpError || !data.user) return signUpError?.message ?? '회원가입에 실패했어요'
 
-  if (error || !data.user) {
-    return { error: error?.message ?? '회원가입에 실패했습니다.' }
-  }
-
-  const inviteCode = await generateUniqueInviteCode(supabase)
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  const inviteCode = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * 36)]).join('')
 
   const { error: profileError } = await supabase.from('profiles').insert({
     id: data.user.id,
-    nickname,
+    username: username.trim().toLowerCase(),
+    nickname: nickname.trim(),
     invite_code: inviteCode,
   })
-
-  if (profileError) {
-    return { error: '프로필 생성에 실패했습니다.' }
-  }
+  if (profileError) return '프로필 생성에 실패했어요'
 
   redirect('/onboarding')
-}
-
-export async function signIn(formData: FormData) {
-  const supabase = await createClient()
-
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
-
-  if (error) {
-    return { error: '이메일 또는 비밀번호가 올바르지 않습니다.' }
-  }
-
-  redirect('/dashboard')
 }
 
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
-  redirect('/login')
-}
-
-async function generateUniqueInviteCode(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  while (true) {
-    let code = ''
-    for (let i = 0; i < 6; i++) {
-      code += chars[Math.floor(Math.random() * chars.length)]
-    }
-    const { data } = await supabase
-      .from('profiles')
-      .select('invite_code')
-      .eq('invite_code', code)
-      .single()
-
-    if (!data) return code
-  }
+  redirect('/')
 }
