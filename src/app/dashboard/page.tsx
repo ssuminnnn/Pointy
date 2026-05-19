@@ -6,30 +6,15 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-  if (authError) {
-    console.error('[Dashboard] Auth error:', authError.message)
-  }
-
-  if (!user) {
-    console.log('[Dashboard] No user found, redirecting to /')
-    redirect('/')
-  }
+  if (authError) console.error('[Dashboard] Auth error:', authError.message)
+  if (!user) { console.log('[Dashboard] No user, redirect /'); redirect('/') }
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles').select('*').eq('id', user.id).single()
 
-  if (profileError) {
-    console.error('[Dashboard] Profile error:', profileError.message, 'code:', profileError.code)
-  }
-
-  if (!profile) {
-    console.log('[Dashboard] No profile found for user:', user.id, 'redirecting to /')
-    redirect('/')
-  }
-
-  if (!profile.relation_type && !profile.partner_id && !profile.group_id) {
-    redirect('/onboarding')
-  }
+  if (profileError) console.error('[Dashboard] Profile error:', profileError.message)
+  if (!profile) { console.log('[Dashboard] No profile, redirect /'); redirect('/') }
+  if (!profile.relation_type && !profile.partner_id && !profile.group_id) redirect('/onboarding')
 
   const systemType = profile.system_type ?? 'score_increase'
   const isDecreasing = systemType === 'score_decrease'
@@ -57,6 +42,14 @@ export default async function DashboardPage() {
     return { ...member, score }
   }))
 
+  // 보상 문구 가져오기
+  let rewardText = ''
+  if (profile.group_id) {
+    const { data: group } = await supabase
+      .from('groups').select('reward_text').eq('id', profile.group_id).single()
+    rewardText = group?.reward_text ?? ''
+  }
+
   // 최근 기록
   const { data: recentRecords } = await supabase
     .from('records')
@@ -71,6 +64,8 @@ export default async function DashboardPage() {
       memberScores={memberScores}
       systemType={systemType}
       recentRecords={recentRecords ?? []}
+      rewardText={rewardText}
+      groupId={profile.group_id ?? ''}
     />
   )
 }

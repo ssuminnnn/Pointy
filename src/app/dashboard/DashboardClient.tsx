@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Minus, Bell, User, ArrowUpRight, ArrowDownRight, Crown, X } from 'lucide-react'
+import { Plus, Minus, Bell, User, ArrowUpRight, ArrowDownRight, Crown, X, Pencil, Gift } from 'lucide-react'
 import { PCoinLogo, GrapeBunch, Btn, FInput, PhoneFrame, C, AVATARS } from '@/components/ui/pointy'
 import { BottomNav } from '@/components/BottomNav'
 import { createClient } from '@/utils/supabase/client'
@@ -87,20 +87,60 @@ function ScoreModal({ systemType, target, onClose, onSave }: {
   )
 }
 
-export default function DashboardClient({ profile, memberScores, systemType, recentRecords }: {
+function RewardModal({ current, onClose, onSave }: {
+  current: string
+  onClose: () => void
+  onSave: (text: string) => void
+}) {
+  const [text, setText] = useState(current)
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 backdrop-blur-sm" style={{ background: 'rgba(46,31,36,0.28)' }} onClick={onClose} />
+      <div className="relative z-10 w-full max-w-[390px] mx-auto rounded-t-[2.5rem] sm:rounded-[2rem] shadow-2xl px-6 pt-5 pb-10" style={{ background: C.card }}>
+        <div className="w-10 h-1.5 rounded-full mx-auto mb-5 sm:hidden" style={{ background: C.border }} />
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold" style={{ color: C.text, fontFamily: 'Noto Serif KR, serif' }}>보상 문구 설정</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: C.muted }}>
+            <X className="w-4 h-4" style={{ color: C.sub }} />
+          </button>
+        </div>
+        <p className="text-xs mb-4" style={{ color: C.sub }}>목표 달성 시 표시될 보상을 입력해요 🎁</p>
+        <div className="mb-5">
+          <FInput
+            label="보상 문구"
+            placeholder="예: 치킨 사주기 🍗, 영화 보러 가기 🎬"
+            value={text}
+            onChange={setText}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Btn variant="secondary" style={{ flex: 1 }} onClick={onClose}>취소</Btn>
+          <Btn style={{ flex: 1 }} onClick={() => { onSave(text); onClose() }}>저장</Btn>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function DashboardClient({ profile, memberScores, systemType, recentRecords, rewardText: initialRewardText, groupId }: {
   profile: Profile
   memberScores: MemberScore[]
   systemType: string
   recentRecords: RecordItem[]
+  rewardText: string
+  groupId: string
 }) {
   const router = useRouter()
   const [modalTarget, setModalTarget] = useState<MemberScore | null>(null)
+  const [showRewardModal, setShowRewardModal] = useState(false)
+  const [rewardText, setRewardText] = useState(initialRewardText)
   const [scores, setScores] = useState<Record<string, number>>(
     Object.fromEntries(memberScores.map(m => [m.id, m.score]))
   )
   const [records, setRecords] = useState(recentRecords)
   const isGrape = systemType === 'sticker'
   const isDecreasing = systemType === 'score_decrease'
+  const showReward = isGrape || systemType === 'score_increase'
 
   const otherMembers = memberScores.filter(m => m.id !== profile.id)
   const hasPartner = otherMembers.length > 0
@@ -125,7 +165,7 @@ export default function DashboardClient({ profile, memberScores, systemType, rec
       const newScore = isGrape ? Math.max(0, Math.min(30, current + delta)) : current + delta
       return { ...prev, [targetId]: newScore }
     })
-    const targetMember = allDisplayMembers.find(m => m.id === targetId)
+    const targetMember = memberScores.find(m => m.id === targetId)
     setRecords(r => [{
       id: Date.now().toString(),
       amount: delta,
@@ -135,6 +175,13 @@ export default function DashboardClient({ profile, memberScores, systemType, rec
       to_user: targetMember ? { nickname: targetMember.nickname } : null
     }, ...r.slice(0, 4)])
     router.refresh()
+  }
+
+  async function saveRewardText(text: string) {
+    setRewardText(text)
+    if (!groupId) return
+    const supabase = createClient()
+    await supabase.from('groups').update({ reward_text: text }).eq('id', groupId)
   }
 
   return (
@@ -161,7 +208,7 @@ export default function DashboardClient({ profile, memberScores, systemType, rec
           {/* 연결 상태 */}
           <div className="flex items-center gap-2">
             <div className="flex -space-x-2">
-              {allDisplayMembers.slice(0, 5).map((m, i) => (
+              {memberScores.slice(0, 5).map((m, i) => (
                 <div key={m.id} className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white"
                   style={{ background: AVATARS[i % AVATARS.length], color: C.text }}>
                   {m.nickname[0]}
@@ -169,13 +216,31 @@ export default function DashboardClient({ profile, memberScores, systemType, rec
               ))}
             </div>
             <span className="text-sm truncate max-w-[160px]" style={{ color: C.sub }}>
-              {allDisplayMembers.map(m => m.nickname).join(', ')}
+              {memberScores.map(m => m.nickname).join(', ')}
             </span>
             <div className="ml-auto flex items-center gap-1 text-xs font-medium flex-shrink-0">
               <div className="w-1.5 h-1.5 rounded-full" style={{ background: hasPartner ? C.positive : C.border }} />
               <span style={{ color: hasPartner ? C.positive : C.sub }}>{hasPartner ? '연결됨' : '미연결'}</span>
             </div>
           </div>
+
+          {/* 보상 문구 배너 (칭찬형/포도알만) */}
+          {showReward && hasPartner && (
+            <div className="rounded-2xl px-4 py-3 flex items-center gap-2"
+              style={{ background: isGrape ? '#f3eeff' : '#fff5f7', border: `1px solid ${isGrape ? '#e0d0f5' : C.border}` }}>
+              <Gift className="w-4 h-4 flex-shrink-0" style={{ color: isGrape ? '#7B4DAA' : '#d4607a' }} />
+              <span className="text-sm flex-1 font-medium" style={{ color: isGrape ? '#7B4DAA' : '#d4607a' }}>
+                {rewardText || '목표 달성 보상을 설정해보세요 🎁'}
+              </span>
+              {profile.is_admin && (
+                <button onClick={() => setShowRewardModal(true)}
+                  className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: isGrape ? '#e0d0f5' : C.border }}>
+                  <Pencil className="w-3 h-3" style={{ color: isGrape ? '#7B4DAA' : '#d4607a' }} />
+                </button>
+              )}
+            </div>
+          )}
 
           {/* 각 멤버 점수 카드 */}
           {allDisplayMembers.map((member, i) => {
@@ -184,6 +249,7 @@ export default function DashboardClient({ profile, memberScores, systemType, rec
             const canEdit = allAreAdmin ? (profile.is_admin && !isSelf) : (profile.is_admin && !member.is_admin)
             const score = scores[member.id] ?? member.score
             const maxScore = isDecreasing ? 100 : Math.max(score, 100)
+            const memberIdx = memberScores.findIndex(m => m.id === member.id)
 
             return (
               <div key={member.id} className="rounded-3xl border p-5 shadow-sm"
@@ -192,7 +258,7 @@ export default function DashboardClient({ profile, memberScores, systemType, rec
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2.5">
                     <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
-                      style={{ background: AVATARS[i % AVATARS.length], color: C.text }}>
+                      style={{ background: AVATARS[memberIdx % AVATARS.length], color: C.text }}>
                       {member.nickname[0]}
                     </div>
                     <div>
@@ -232,6 +298,13 @@ export default function DashboardClient({ profile, memberScores, systemType, rec
                       <div className="h-full rounded-full transition-all duration-700"
                         style={{ width: `${(score / 30) * 100}%`, background: 'linear-gradient(90deg,#9b6dca,#7B4DAA)' }} />
                     </div>
+                    {/* 30개 완료 시 보상 문구 강조 */}
+                    {score >= 30 && rewardText && (
+                      <div className="mt-1 w-full rounded-xl px-3 py-2 text-center text-sm font-semibold"
+                        style={{ background: '#f3eeff', color: '#7B4DAA' }}>
+                        🎉 {rewardText}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div>
@@ -287,12 +360,20 @@ export default function DashboardClient({ profile, memberScores, systemType, rec
         </main>
 
         <BottomNav active="dashboard" />
+
         {modalTarget && (
           <ScoreModal
             systemType={systemType}
             target={modalTarget}
             onClose={() => setModalTarget(null)}
             onSave={saveScore}
+          />
+        )}
+        {showRewardModal && (
+          <RewardModal
+            current={rewardText}
+            onClose={() => setShowRewardModal(false)}
+            onSave={saveRewardText}
           />
         )}
       </div>
