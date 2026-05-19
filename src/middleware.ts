@@ -27,11 +27,11 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  if (!user && pathname !== '/' && pathname !== '/login' && pathname !== '/signup' && !pathname.startsWith('/preview')) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  if (!user && pathname !== '/' && pathname !== '/signup' && !pathname.startsWith('/preview') && !pathname.startsWith('/api/')) {
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
-  if (user && (pathname === '/login' || pathname === '/signup')) {
+  if (user && pathname === '/signup') {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 

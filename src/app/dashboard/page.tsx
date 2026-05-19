@@ -4,12 +4,32 @@ import DashboardClient from './DashboardClient'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/')
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-  if (!profile) redirect('/')
-  if (!profile.relation_type && !profile.partner_id && !profile.group_id) redirect('/onboarding')
+  if (authError) {
+    console.error('[Dashboard] Auth error:', authError.message)
+  }
+
+  if (!user) {
+    console.log('[Dashboard] No user found, redirecting to /')
+    redirect('/')
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles').select('*').eq('id', user.id).single()
+
+  if (profileError) {
+    console.error('[Dashboard] Profile error:', profileError.message, 'code:', profileError.code)
+  }
+
+  if (!profile) {
+    console.log('[Dashboard] No profile found for user:', user.id, 'redirecting to /')
+    redirect('/')
+  }
+
+  if (!profile.relation_type && !profile.partner_id && !profile.group_id) {
+    redirect('/onboarding')
+  }
 
   const systemType = profile.system_type ?? 'score_increase'
   const isDecreasing = systemType === 'score_decrease'
