@@ -104,8 +104,13 @@ export default function DashboardClient({ profile, memberScores, systemType, rec
 
   const otherMembers = memberScores.filter(m => m.id !== profile.id)
   const hasPartner = otherMembers.length > 0
-  // 내 카드 먼저, 그 다음 다른 멤버들
-  const allDisplayMembers = memberScores
+
+  // 모두 관리자인지 확인
+  const allAreAdmin = memberScores.every(m => m.is_admin)
+  // 모두 관리자면 전체 카드, 아니면 비관리자 카드만
+  const allDisplayMembers = allAreAdmin
+    ? memberScores
+    : memberScores.filter(m => !m.is_admin)
 
   async function saveScore(targetId: string, delta: number, reason: string) {
     const supabase = createClient()
@@ -175,7 +180,8 @@ export default function DashboardClient({ profile, memberScores, systemType, rec
           {/* 각 멤버 점수 카드 */}
           {allDisplayMembers.map((member, i) => {
             const isSelf = member.id === profile.id
-            const canEdit = profile.is_admin && !isSelf
+            // 모두 관리자면 자기 자신 제외 편집 가능, 아니면 관리자만 비관리자 편집 가능
+            const canEdit = allAreAdmin ? (profile.is_admin && !isSelf) : (profile.is_admin && !member.is_admin)
             const score = scores[member.id] ?? member.score
             const maxScore = isDecreasing ? 100 : Math.max(score, 100)
 
