@@ -6,6 +6,7 @@ import { Plus, Minus, Bell, User, ArrowUpRight, ArrowDownRight, Crown, X, Pencil
 import { PCoinLogo, GrapeBunch, Btn, FInput, PhoneFrame, C, AVATARS } from '@/components/ui/pointy'
 import { BottomNav } from '@/components/BottomNav'
 import { createClient } from '@/utils/supabase/client'
+import { saveRewardTextAction } from '@/app/actions/group'
 import Link from 'next/link'
 
 interface Profile {
@@ -180,8 +181,8 @@ export default function DashboardClient({ profile, memberScores, systemType, rec
   async function saveRewardText(text: string) {
     setRewardText(text)
     if (!groupId) return
-    const supabase = createClient()
-    await supabase.from('groups').update({ reward_text: text }).eq('id', groupId)
+    await saveRewardTextAction(groupId, text)
+    router.refresh()
   }
 
   return (
