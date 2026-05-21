@@ -233,13 +233,11 @@ export default function DashboardClient({ profile, memberScores, systemType, rec
               <span className="text-sm flex-1 font-medium" style={{ color: isGrape ? '#7B4DAA' : '#d4607a' }}>
                 {rewardText || '목표 달성 보상을 설정해보세요 🎁'}
               </span>
-              {profile.is_admin && (
-                <button onClick={() => setShowRewardModal(true)}
-                  className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ background: isGrape ? '#e0d0f5' : C.border }}>
-                  <Pencil className="w-3 h-3" style={{ color: isGrape ? '#7B4DAA' : '#d4607a' }} />
-                </button>
-              )}
+              <button onClick={() => setShowRewardModal(true)}
+                className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: isGrape ? '#e0d0f5' : C.border }}>
+                <Pencil className="w-3 h-3" style={{ color: isGrape ? '#7B4DAA' : '#d4607a' }} />
+              </button>
             </div>
           )}
 
